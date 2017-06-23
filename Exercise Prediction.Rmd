@@ -1,0 +1,118 @@
+---
+title: "Exercise Prediction"
+author: "Satakarni Bommuluri"
+output: html_document
+---
+
+###Abstract 
+The human workout activity is captured using devices such as such as *Jawbone Up, Nike FuelBand, and Fitbit*. Often times this data is used to quantify the workout and not so much to determine the quality of the workout. In this paper, set of prediction models are used to determine how well they do the workout. For this purpose, I use data from accelerometers on the belt, forearm, arm, and dumbbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information about data is available from the [website here](http://groupware.les.inf.puc-rio.br/har)  (see the section on the Weight Lifting Exercise Dataset).
+This paper ranks the quality of work based on following classes: 
+
+1. exactly according to the specification (Class A)
+2. throwing the elbows to the front (Class B)
+3. lifting the dumbbell only halfway (Class C)
+4. lowering the dumbbell only halfway (Class D)
+5. throwing the hips to the front (Class E)  
+
+###Data
+**Attributed to: **http://groupware.les.inf.puc-rio.br/har  
+We will download the training data set to build and test our model. Later we will validate our model with training dataset.  
+
+Download the data
+```{r}
+if(!file.exists("pml-training.csv")){
+  download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile = "pml-training.csv")
+}
+if(!file.exists("pml-testing.csv")){
+ download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", destfile = "pml-testing.csv") 
+}
+```
+
+Read data into dataframes 
+```{r}
+training <- read.csv(file = "pml-training.csv",  na.strings = c("NA", "#DIV/0!", ""))
+validation <- read.csv(file = "pml-testing.csv", na.strings = c("NA", "#DIV/0!", ""))
+```
+
+Dealing with missing values
+```{r}
+#remove the columns with all missing values 
+training <- training[,colSums(is.na(training))==0]
+validation <- validation[,colSums(is.na(validation))==0]
+```
+
+Removing the features not necessary for predicting the class of exercise
+```{r}
+suppressMessages(library(dplyr))
+training <- select(training, -X, -user_name, -raw_timestamp_part_1, -raw_timestamp_part_2, -new_window, -num_window)
+validation <- select(validation, -X, -user_name, -raw_timestamp_part_1, -raw_timestamp_part_2, -new_window, -num_window)
+```
+
+Partition training Data into NewTraining (75%) and NewTesting (25%) 
+```{r}
+suppressMessages(library(caret))
+set.seed(12345)
+inTrain <- createDataPartition(y = training$classe, p = (3/4), list = FALSE)
+NewTraining <- training[inTrain,]
+NewTesting <- training[-inTrain,]
+#trainingData <- createDataPartition(y)
+```
+
+Explore the (outcome) Class field of New Training Data 
+
+```{r}
+dim(NewTraining)
+plot(NewTraining$classe, main = "Class Frequency")
+```
+
+
+###Modelling 01: Decision Tree 
+
+We begin our modelling with simple decision tree. 
+```{r}
+suppressMessages(library(rpart)); suppressMessages((library(rpart.plot)))
+model01 <- rpart(formula = (classe~.), data = NewTraining, method = "class") #method is class as the variable classe is a level
+rpart.plot(x = model01, extra=0)
+```
+
+Testing the model01 prediciton
+```{r}
+predict01 <- predict(object = model01, newdata = NewTesting, type = "class")
+confusionMatrix(predict01, NewTesting$classe)
+```
+
+###Modelling 02: Random Forest
+
+We now continue building the "mighty" random forest. 
+```{r}
+suppressMessages(library(randomForest))
+set.seed(12345)
+model02 <- randomForest(classe ~ ., data = NewTraining, method = "class")
+#treePLot <- getTree(rfobj = model02, k = 1, labelVar = TRUE)
+varImpPlot(model02, main = "Gini Index of Model02")
+```
+
+Tetsing the model02 prediciton
+```{r}
+predict02 <- predict(object = model02, newdata = NewTesting)
+confusionMatrix(predict02, NewTesting$classe)
+
+```
+### Discussion on error sample error rate. 
+As expected the mighty Random forest based model on "NewTraining" dataset has higher accuracy (>99%), Sensitivity(>99%) and Specificity (>99%) than the lonely decision tree based model on "NewTraining" dataset. Dues to this I **made the choice* to use the random forest model on  "NewTraining" dataset to predict the classes of validation (or testing) dataset of 20 test cases. 
+
+###Cross Validation
+
+```{r}
+colnames(validation) = colnames(training)
+#All predictors need be at same level as training levels for randomForest() function
+levels(validation$cvtd_timestamp) <- levels(NewTraining$cvtd_timestamp) 
+predict03 <- predict(object = model02, newdata = validation, type = "class")
+```
+
+###Submission of 20 test cases results
+```{r}
+predict03
+```
+
+
