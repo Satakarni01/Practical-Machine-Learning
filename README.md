@@ -1,0 +1,3 @@
+# Practical-Machine-Learning
+Practical Machine Learning
+The human workout activity is captured using devices such as such as *Jawbone Up, Nike FuelBand, and Fitbit*. Often times this data is used to quantify the workout and not so much to determine the quality of the workout. In this paper, set of prediction models are used to determine how well they do the workout. For this purpose, I use data from accelerometers on the belt, forearm, arm, and dumbbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information about data is available from the [website here](http://groupware.les.inf.puc-rio.br/har)  (see the section on the Weight Lifting Exercise Dataset).
